@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, escape, session
 from vsearch import search4letters
-from DBcm import UseDatabase, ConnectionError
+from DBcm import UseDatabase
 from checker import check_logged_in
 
 
@@ -34,10 +34,7 @@ def do_search() -> 'html':
     letters = request.form['letters']
     title = 'Here are your results:'
     results = str(search4letters(phrase, letters))
-    try:
-        log_request(request, results)
-    except Exception as err:
-        print('***** Logging failed with this error:', str(err))
+    log_request(request, results)
     return render_template('results.html',
                            the_phrase=phrase,
                            the_letters=letters,
@@ -54,23 +51,17 @@ def entry_page() -> 'html':
 @app.route('/viewlog')
 @check_logged_in
 def view_the_log() -> 'html':
-    try:
-        with UseDatabase(app.config['dbconfig']) as cursor:
-            _SQL = """select phrase, letters, ip, browser_string, results from log"""
-            cursor.execute(_SQL)
-            contents = cursor.fetchall()
-            titles = ('Phrase', 'Letters', 'Remote_addr',
-                      'User_agent', 'Results')
+    with UseDatabase(app.config['dbconfig']) as cursor:
+        _SQL = """select phrase, letters, ip, browser_string, results from log"""
+        cursor.execute(_SQL)
+        contents = cursor.fetchall()
 
-        return render_template('viewlog.html',
-                               the_title='View Log',
-                               the_row_titles=titles,
-                               the_data=contents)
-    except ConnectionError as err:
-        print('Is your database switched on? Error:', str(err))
-    except Exception as err:
-        print('Something went wrong:', str(err))
-    return 'Error'
+    titles = ('Phrase', 'Letters', 'Remote_addr', 'User_agent', 'Results')
+
+    return render_template('viewlog.html',
+                           the_title='View Log',
+                           the_row_titles=titles,
+                           the_data=contents)
 
 
 @app.route('/login')
